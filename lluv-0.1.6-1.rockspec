@@ -1,17 +1,17 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "lluv"
-version = "0.1.5-1"
+version = "0.1.6-1"
 
 -- LuaDist source
 source = {
-  tag = "0.1.5-1",
+  tag = "0.1.6-1",
   url = "git://github.com/LuaDist-testing/lluv.git"
 }
 -- Original source
 -- source = {
---   url = "https://github.com/moteus/lua-lluv/archive/v0.1.5.zip",
---   dir = "lua-lluv-0.1.5",
+--   url = "https://github.com/moteus/lua-lluv/archive/v0.1.6.zip",
+--   dir = "lua-lluv-0.1.6",
 -- }
 
 description = {
