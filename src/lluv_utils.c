@@ -55,9 +55,25 @@ LLUV_INTERNAL void lluv_free(lua_State* L, void *ptr){
 }
 
 LLUV_INTERNAL int lluv_lua_call(lua_State* L, int narg, int nret){
-  int error_handler = lua_isnil(L, LLUV_ERROR_HANDLER_INDEX) ? 0 : LLUV_ERROR_HANDLER_INDEX;
-  int ret = lua_pcall(L, narg, nret, error_handler);
- 
+  int ret, error_handler = lua_isnil(L, LLUV_ERROR_HANDLER_INDEX) ? 0 : LLUV_ERROR_HANDLER_INDEX;
+
+  // On Lua it is possible use upvalueindex directly. (Tested On Lua 5.1-5.3)
+  // But it is fail on LuaJIT.
+  // But Lua manual says `In the current implementation, this index cannot be a pseudo-index`
+  // May be use runtime check for LuaJIT?
+
+  if(error_handler){
+    lua_pushvalue(L, error_handler);
+    error_handler = lua_absindex(L, -(narg+2));
+    lua_insert(L, error_handler);
+  }
+
+  ret = lua_pcall(L, narg, nret, error_handler);
+
+  if(error_handler){
+    lua_remove(L, error_handler);
+  }
+
   if(!ret) return 0;
 
   if(ret == LUA_ERRMEM) lua_pushlightuserdata(L, (void*)LLUV_MEMORY_ERROR_MARK);
@@ -329,9 +345,24 @@ LLUV_INTERNAL unsigned int lluv_opt_flags_ui(lua_State *L, int idx, unsigned int
     return flags;
   }
   lua_pushstring(L, "Unsupported flag type: ");
-  lua_pushstring(L, lua_typename(L, idx));
+  lua_pushstring(L, lua_typename(L, lua_type(L, idx)));
   lua_concat(L, 2);
   return lua_error(L);
+}
+
+LLUV_INTERNAL unsigned int lluv_opt_flags_ui_2(lua_State *L, int idx, unsigned int d, const lluv_uv_const_t* names){
+  if(lua_type(L, idx) == LUA_TSTRING){
+    const lluv_uv_const_t *name;
+    const char *key = lua_tostring(L, idx);
+    for(name = names; name->name; ++name){
+      if(0 == strcmp(name->name, key)){
+        return name->code;
+      }
+    }
+    lua_pushfstring(L, "Unknown flag: `%s`", key);
+    return lua_error(L);
+  }
+  return lluv_opt_flags_ui(L, idx, d, names);
 }
 
 LLUV_INTERNAL ssize_t lluv_opt_named_const(lua_State *L, int idx, unsigned int d, const lluv_uv_const_t* names){
@@ -363,11 +394,7 @@ LLUV_INTERNAL unsigned int lluv_opt_af_flags(lua_State *L, int idx, unsigned int
     {0, NULL}
   };
 
-  if(lua_type(L, idx) == LUA_TSTRING){
-    return lluv_opt_named_const(L, idx, d, FLAGS);
-  }
-
-  return lluv_opt_flags_ui(L, idx, d, FLAGS);
+  return lluv_opt_flags_ui_2(L, idx, d, FLAGS);
 }
 
 LLUV_INTERNAL void lluv_push_timeval(lua_State *L, const uv_timeval_t *tv){

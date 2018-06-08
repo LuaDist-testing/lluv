@@ -11,9 +11,11 @@
 ------------------------------------------------------------------
 --
 -- Known limitations
---  * does not suppot `text` mode. 
---  * file:read does not support `*n` pattern
+--  * `text` mode supports only for `*l` pattern.
+--           Any other patterns works only as binary
+--  * file:read does not support `*n` pattern (convert string to number)
 --  * file:write supports only strings
+--  * file:lines/fs.lines does not works on Lua 5.1 (yield from iterator)
 --
 --! @usage
 -- ut.corun(function()
@@ -25,6 +27,8 @@
 
 local uv = require "lluv"
 local ut = require "lluv.utils"
+
+local is_windows = (string.sub(package.config, 1, 1) == '\\')
 
 local unpack = unpack or table.unpack
 
@@ -43,7 +47,9 @@ end
 
 local EOF = uv.error(uv.ERROR_UV, uv.EOF)
 
-local EOL = "\n"
+local TEXT_EOL   = is_windows and "\r\n" or "\n"
+
+local BINARY_EOL = "\n"
 
 local BUFFER_SIZE = 4096
 
@@ -55,6 +61,17 @@ function File:__init()
   self._wait = false
 
   return self
+end
+
+function File:__tostring()
+  local hash
+  if self._fd then
+    hash = string.match(tostring(self._fd), '%((.-)%)$')
+  else
+    hash = 'closed'
+  end
+
+  return string.format('Lua-UV cofs.file (%s)', hash)
 end
 
 function File:_resume(...)
@@ -84,6 +101,8 @@ end
 
 function File:open(path, mode)
   local terminated
+
+  self._eol = string.find(mode, 'b', nil, true) and BINARY_EOL or TEXT_EOL
 
   -- uv suppots only binary mode
   mode = mode:gsub('[bt]', '')
@@ -145,7 +164,7 @@ function File:_read_some(n)
 
     if err then return self:_resume(nil, err) end
 
-    if size == 0 then return self:_resume('') end
+    if size == 0 then return self:_resume() end
 
     self._pos = self._pos + size
     self:_resume(buffer:to_s(size))
@@ -167,7 +186,10 @@ function File:read_n(n)
   local res = {}
   while n > 0 do
     local chunk, err = self:_read_some(math.min(chunk_size, n))
-    if not chunk then return nil, err, table.concat(res) end
+    if not chunk then
+      if err then return nil, err, table.concat(res) end
+      break
+    end
     if #chunk == 0 then break end
     n = n - #chunk
     res[#res + 1] = chunk
@@ -184,17 +206,21 @@ function File:read_line(keep)
   local res = ''
   while true do
     local chunk, err = self:_read_some()
-    if not chunk then return nil, err end
+    if not chunk then
+      if err then return nil, err end
+      if #res > 0 then return res end
+      return nil -- EOF
+    end
     if chunk == '' then return res end
 
     res = res .. chunk
-    local i = string.find(res, EOL, nil, true)
+    local i = string.find(res, self._eol, nil, true)
 
     if i then
-      local rest_size = #res - (i - 1 + #EOL)
+      local rest_size = #res - (i - 1 + #self._eol)
       self._pos = self._pos - rest_size
 
-      if keep then i = i + #EOL end
+      if keep then i = i + #self._eol end
       return string.sub(res, 1, i - 1)
     end
   end
@@ -223,6 +249,14 @@ function File:read(p, ...)
   until not p
 
   return unpack(res, 1, i - 1)
+end
+
+local function lines(self)
+  return self:read_line()
+end
+
+function File:lines()
+  return lines, self
 end
 
 function File:write_string(str)
@@ -430,6 +464,24 @@ end
 
 function cofs.access(path, flags)
   return call_fs(uv.fs_access, path, flags)
+end
+
+function cofs.type(f)
+  if getmetatable(f) ~= File then return nil end
+  if f._fd then return 'file' end
+  return 'closed file'
+end
+
+local function lines(file)
+  local line = file:read_line()
+  if not line then file:close() end
+  return line
+end
+
+function cofs.lines(f)
+  local file, err = cofs.open(f, 'r')
+  if not file then error(tostring(err), 2) end
+  return lines, file
 end
 
 return cofs

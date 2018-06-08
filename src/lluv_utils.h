@@ -1,7 +1,7 @@
 /******************************************************************************
 * Author: Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
-* Copyright (C) 2014-2016 Alexey Melnichuk <alexeymelnichuck@gmail.com>
+* Copyright (C) 2014-2017 Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
 * Licensed according to the included 'LICENSE' document
 *
@@ -103,6 +103,9 @@ LLUV_INTERNAL void lluv_value_dump(lua_State* L, int i, const char* prefix);
 LLUV_INTERNAL void lluv_register_constants(lua_State* L, const lluv_uv_const_t* cons);
 
 LLUV_INTERNAL unsigned int lluv_opt_flags_ui(lua_State *L, int idx, unsigned int d, const lluv_uv_const_t* names);
+
+/* allows pass flag name as string */
+LLUV_INTERNAL unsigned int lluv_opt_flags_ui_2(lua_State *L, int idx, unsigned int d, const lluv_uv_const_t* names);
 
 LLUV_INTERNAL ssize_t lluv_opt_named_const(lua_State *L, int idx, unsigned int d, const lluv_uv_const_t* names);
 

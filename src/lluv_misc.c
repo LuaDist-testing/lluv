@@ -418,6 +418,96 @@ LLUV_IMPL_SAFE(lluv_os_unsetenv){
 
 #endif
 
+#if LLUV_UV_VER_GE(1,16,0)
+
+LLUV_IMPL_SAFE(lluv_os_getppid){
+  uv_pid_t ppid = uv_os_getppid();
+  lutil_pushint64(L, ppid);
+  return 1;
+}
+
+/*
+UV_EXTERN int uv_if_indextoname(unsigned int ifindex,
+                                char* buffer,
+                                size_t* size);
+UV_EXTERN int uv_if_indextoiid(unsigned int ifindex,
+                               char* buffer,
+                               size_t* size);
+*/
+
+LLUV_IMPL_SAFE(lluv_if_indextoname){
+  int idx = luaL_checkinteger(L, 1);
+
+  char temp[255];
+  size_t size = sizeof(temp);
+  char *buf = &temp[0];
+
+  int err = uv_if_indextoname(idx, buf, &size);
+
+  if (err == UV_ENOBUFS && size != 0) {
+    buf = lluv_alloc(L, size);
+    if(buf){
+      err = uv_if_indextoname(idx, buf, &size);
+    }
+  }
+
+  if(err < 0){
+    if(buf && buf != &temp[0]){
+      lluv_free(L, buf);
+    }
+    if(err == UV_ENOENT){
+      lua_pushnil(L);
+      return 1;
+    }
+    return lluv_fail(L, safe_flag, LLUV_ERR_UV, err, NULL);
+  }
+
+  lua_pushlstring(L, buf, size);
+
+  if(buf && buf != &temp[0]){
+    lluv_free(L, buf);
+  }
+
+  return 1;
+}
+
+LLUV_IMPL_SAFE(lluv_if_indextoiid){
+  int idx = luaL_checkinteger(L, 1);
+
+  char temp[255];
+  size_t size = sizeof(temp);
+  char *buf = &temp[0];
+
+  int err = uv_if_indextoiid(idx, buf, &size);
+
+  if (err == UV_ENOBUFS && size != 0) {
+    buf = lluv_alloc(L, size);
+    if(buf){
+      err = uv_if_indextoiid(idx, buf, &size);
+    }
+  }
+
+  if(err < 0){
+    if(buf && buf != &temp[0]){
+      lluv_free(L, buf);
+    }
+    if(err == UV_ENOENT){
+      lua_pushnil(L);
+      return 1;
+    }
+    return lluv_fail(L, safe_flag, LLUV_ERR_UV, err, NULL);
+  }
+
+  lua_pushlstring(L, buf, size);
+
+  if(buf && buf != &temp[0]){
+    lluv_free(L, buf);
+  }
+
+  return 1;
+}
+#endif
+
 
 static const lluv_uv_const_t lluv_misc_constants[] = {
   { 0, NULL }
@@ -436,6 +526,11 @@ enum {
   LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_12_0_2,
   LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_12_0_3,
   LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_12_0_4,
+  #endif
+  #if LLUV_UV_VER_GE(1,16,0)
+  LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_16_0_1,
+  LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_16_0_2,
+  LLUV_MISC_FUNCTIONS_COUNT_DUMMY_1_16_0_3,
   #endif
   LLUV_MISC_FUNCTIONS_COUNT
 };
@@ -468,6 +563,11 @@ enum {
   { "os_setenv",           lluv_os_setenv_##F       }, \
   { "os_unsetenv",         lluv_os_unsetenv_##F     }, \
 
+#define LLUV_MISC_FUNCTIONS_1_16_0(F)                  \
+  { "os_getppid",          lluv_os_getppid_##F      }, \
+  { "if_indextoname",      lluv_if_indextoname_##F  }, \
+  { "if_indextoiid",       lluv_if_indextoiid_##F   }, \
+
 static const struct luaL_Reg lluv_misc_functions[][LLUV_MISC_FUNCTIONS_COUNT] = {
   {
     LLUV_MISC_FUNCTIONS(unsafe)
@@ -479,6 +579,9 @@ static const struct luaL_Reg lluv_misc_functions[][LLUV_MISC_FUNCTIONS_COUNT] = 
 #endif
 #if LLUV_UV_VER_GE(1,12,0)
     LLUV_MISC_FUNCTIONS_1_12_0(unsafe)
+#endif
+#if LLUV_UV_VER_GE(1,16,0)
+    LLUV_MISC_FUNCTIONS_1_16_0(unsafe)
 #endif
     {NULL,NULL}
   },
@@ -492,6 +595,9 @@ static const struct luaL_Reg lluv_misc_functions[][LLUV_MISC_FUNCTIONS_COUNT] = 
 #endif
 #if LLUV_UV_VER_GE(1,12,0)
     LLUV_MISC_FUNCTIONS_1_12_0(safe)
+#endif
+#if LLUV_UV_VER_GE(1,16,0)
+    LLUV_MISC_FUNCTIONS_1_16_0(safe)
 #endif
     {NULL,NULL}
   },

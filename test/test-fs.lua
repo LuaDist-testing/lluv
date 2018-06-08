@@ -11,7 +11,12 @@ local TEST_CASE  = assert(lunit.TEST_CASE)
 local skip       = lunit.skip or function() end
 
 local uv   = require "lluv"
+local ut   = require "lluv.utils"
+local fs   = require "lluv.cofs"
 local path = require "path"
+local io   = require "io"
+
+local tostring = tostring
 
 local TEST_FILE = "./test.txt"
 local BAD_FILE  = "./test.bad"
@@ -31,7 +36,12 @@ local function rmfile(P)
   path.remove(P)
 end
 
-local select = select
+local function gc_collect(n)
+  for i = 1, n or 5 do collectgarbage('collect') end
+end
+
+local select, ipairs, string, jit = select, ipairs, string, jit
+local _VERSION = _VERSION
 
 local ENABLE = true
 
@@ -135,6 +145,183 @@ it("unlink async bad file", function()
   assert_equal(0, uv.run())
 
   assert_true(run_flag)
+end)
+
+it("access without flag", function()
+  assert(path.exists(TEST_FILE))
+  assert_true(uv.fs_access(TEST_FILE))
+  assert_equal(0, uv.run())
+end)
+
+it("access with string flag", function()
+  assert(path.exists(TEST_FILE))
+  assert_true(uv.fs_access(TEST_FILE, 'read'))
+  assert_equal(0, uv.run())
+end)
+
+it("access with array flag", function()
+  assert(path.exists(TEST_FILE))
+  assert_true(uv.fs_access(TEST_FILE, {'read', 'write'}))
+  assert_equal(0, uv.run())
+end)
+
+end
+
+local _ENV = TEST_CASE'cofs' if ENABLE then
+
+local it = setmetatable(_ENV or _M, {__call = function(self, describe, fn)
+  self["test " .. describe] = fn
+end})
+
+local TEST_DATA = '12345\r\n67890'
+
+local file, err
+
+function setup()
+  mkfile(TEST_FILE, TEST_DATA)
+end
+
+function teardown()
+  if file and file._fd then file._fd:close() end
+  file, err = nil
+
+  gc_collect()
+
+  rmfile(TEST_FILE)
+end
+
+it('open file', function()
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'rb'))
+    assert_equal(TEST_DATA, file:read('*a'))
+    assert(file:close())
+  end)
+
+  assert_equal(0, uv.run())
+end)
+
+it('type function', function()
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'rb'))
+    assert_equal('file', fs.type(file))
+    assert(file:close())
+    assert_equal('closed file', fs.type(file))
+  end)
+
+  assert_function(fs.type)
+  assert_nil(fs.type(1))
+  assert_nil(fs.type(' '))
+  assert_nil(fs.type(nil))
+  assert_nil(fs.type({}))
+  local f = assert(io.open(TEST_FILE, 'rb'))
+  f:close()
+  assert_nil(fs.type(f))
+
+  assert_equal(0, uv.run())
+end)
+
+it('file object to string', function()
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'rb'))
+    assert_match('file %([%xx]+%)$', tostring(file))
+    assert(file:close())
+    assert_match('file %(closed%)$', tostring(file))
+  end)
+
+  assert_equal(0, uv.run())
+end)
+
+it('should read line in text mode', function()
+  local f = assert(io.open(TEST_FILE, 'r'))
+  local line = f:read('*l')
+  f:close()
+
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'r'))
+    assert_equal(line, file:read('*l'))
+    assert(file:close())
+  end)
+
+  assert_equal(0, uv.run())
+end)
+
+it('should read line in binary mode', function()
+  local f = assert(io.open(TEST_FILE, 'rb'))
+  local line = f:read('*l')
+  f:close()
+
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'rb'))
+    assert_equal(line, file:read('*l'))
+    assert(file:close())
+  end)
+
+  assert_equal(0, uv.run())
+end)
+
+it('should return nil on eof', function()
+  local f = assert(io.open(TEST_FILE, 'r'))
+  local line1 = f:read('*l')
+  local line2 = f:read('*l')
+  local line3 = f:read('*l')
+  f:close()
+
+  ut.corun(function()
+    file, err = assert(fs.open(TEST_FILE, 'r'))
+    assert_equal(line1, file:read('*l'))
+    assert_equal(line2, file:read('*l'))
+    assert_equal(line3, file:read('*l'))
+    assert(file:close())
+  end)
+
+  assert_equal(0, uv.run())
+end)
+
+it('lines should works', function()
+  local f = assert(io.open(TEST_FILE, 'r'))
+
+  local lines = {}
+  for line in io.lines(TEST_FILE)do lines[#lines + 1] = line end
+
+  local l1, l2 = {}, {}
+  if jit or _VERSION ~= 'Lua 5.1' then
+    ut.corun(function()
+      file, err = assert(fs.open(TEST_FILE, 'r'))
+      for line in file:lines() do l1[#l1 + 1] = line end
+      assert(file:close())
+      for line in fs.lines(TEST_FILE)do l2[#l2 + 1] = line end
+    end)
+  else
+    -- Lua 5.1 does not allows yield from iterator
+    ut.corun(function()
+      file, err = assert(fs.open(TEST_FILE, 'r'))
+      local iter, state = file:lines()
+      while true do
+          local line = iter(state)
+          if not line then break end
+          l1[#l1 + 1] = line
+      end
+      assert(file:close())
+
+      local iter, state = fs.lines(TEST_FILE)
+      while true do
+          local line = iter(state)
+          if not line then break end
+          l2[#l2 + 1] = line
+      end
+    end)
+  end
+
+  assert_equal(0, uv.run())
+
+  assert_equal(#lines, #l1)
+  assert_equal(#lines, #l2)
+
+  for i, line in ipairs(lines) do
+    local format = '%.2d - %s'
+    assert_equal(string.format(format, i, line), string.format(format, i, tostring(l1[i])))
+    assert_equal(string.format(format, i, line), string.format(format, i, tostring(l2[i])))
+  end
 end)
 
 end

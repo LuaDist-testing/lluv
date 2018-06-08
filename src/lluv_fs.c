@@ -1,7 +1,7 @@
 /******************************************************************************
 * Author: Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
-* Copyright (C) 2014-2016 Alexey Melnichuk <alexeymelnichuck@gmail.com>
+* Copyright (C) 2014-2017 Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
 * Licensed according to the included 'LICENSE' document
 *
@@ -496,7 +496,7 @@ LLUV_IMPL_SAFE(lluv_fs_access) {
   const char *path = luaL_checkstring(L, ++argc);
   int flags = F_OK;
   if(lluv_arg_exists(L, argc + 1)){
-    flags = lluv_opt_flags_ui(L, ++argc, flags, FLAGS);
+    flags = lluv_opt_flags_ui_2(L, ++argc, flags, FLAGS);
   }
 
   LLUV_PRE_FS();

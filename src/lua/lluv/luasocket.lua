@@ -2,7 +2,7 @@
 --
 --  Author: Alexey Melnichuk <alexeymelnichuck@gmail.com>
 --
---  Copyright (C) 2014-2016 Alexey Melnichuk <alexeymelnichuck@gmail.com>
+--  Copyright (C) 2014-2017 Alexey Melnichuk <alexeymelnichuck@gmail.com>
 --
 --  Licensed according to the included 'LICENSE' document
 --
@@ -171,6 +171,12 @@ function BaseSock:getsockname()
   if not self._sock then return nil, self._err end
 
   return self._sock:getsockname()
+end
+
+function BaseSock:getpeername()
+  if not self._sock then return nil, self._err end
+
+  return self._sock:getpeername()
 end
 
 function BaseSock:getfd()
