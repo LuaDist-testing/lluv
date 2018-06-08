@@ -1,10 +1,18 @@
-package = "lluv"
-version = "scm-0"
+-- This file was automatically generated for the LuaDist project.
 
+package = "lluv"
+version = "0.1.2-1"
+
+-- LuaDist source
 source = {
-  url = "https://github.com/moteus/lua-lluv/archive/master.zip",
-  dir = "lua-lluv-master",
+  tag = "0.1.2-1",
+  url = "git://github.com/LuaDist-testing/lluv.git"
 }
+-- Original source
+-- source = {
+--   url = "https://github.com/moteus/lua-lluv/archive/v0.1.2.zip",
+--   dir = "lua-lluv-0.1.2",
+-- }
 
 description = {
   summary    = "Lua low-level binding to libuv",

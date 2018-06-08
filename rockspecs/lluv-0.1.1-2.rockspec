@@ -1,18 +1,10 @@
--- This file was automatically generated for the LuaDist project.
-
 package = "lluv"
 version = "0.1.1-2"
 
--- LuaDist source
 source = {
-  tag = "0.1.1-2",
-  url = "git://github.com/LuaDist-testing/lluv.git"
+  url = "https://github.com/moteus/lua-lluv/archive/v0.1.1.zip",
+  dir = "lua-lluv-0.1.1",
 }
--- Original source
--- source = {
---   url = "https://github.com/moteus/lua-lluv/archive/v0.1.1.zip",
---   dir = "lua-lluv-0.1.1",
--- }
 
 description = {
   summary    = "Lua low-level binding to libuv",

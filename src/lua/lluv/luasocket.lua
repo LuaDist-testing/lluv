@@ -120,6 +120,7 @@ function BaseSock:_on_io_error(err)
 
   self._err = err
 
+  self._sock:stop_read()
   self._sock:close(function()
     if self:_waiting() then
       self:_resume(nil, err)
@@ -157,10 +158,34 @@ function BaseSock:getfd()
   return self._sock:fileno()
 end
 
+function BaseSock:socket()
+  return self._sock
+end
+
 function BaseSock:close()
-  if (not self._timer) or (self._timer:closed()) then return end
-  self._timer:close()
-  self._timer = nil
+  if self._sock  then self._sock:close()  end
+  if self._timer then self._timer:close() end
+  self._sock, self._timer = nil
+  return true
+end
+
+function BaseSock:shutdown()
+  if not self._sock then return nil, self._err end
+
+  local terminated
+  self._sock:shutdown(function(cli, err)
+    if terminated then return end
+    if err then return self:_on_io_error(err) end
+    return self:_resume(true)
+  end)
+
+  local ok, err = self:_yield()
+  terminated = true
+
+  if not ok then
+    return nil, self._err
+  end
+  return ok, err
 end
 
 end
@@ -367,11 +392,14 @@ function TcpSock:accept()
   return s:_start_read()
 end
 
-function TcpSock:close()
-  TcpSock.__base.close(self)
-  if self._sock  then self._sock:close()  end
-  self._sock = nil
-  return true
+function TcpSock:socket(clear)
+  local s, b = self._sock, self._buf
+  if clear then
+    self._sock:stop_read()
+    self._sock, self._buf = nil
+    self:close()
+  end
+  return s, b
 end
 
 end
@@ -503,11 +531,14 @@ function UdpSock:getpeername(host, port)
   return self._peer.host, self._peer.port
 end
 
-function UdpSock:close()
-  UdpSock.__base.close(self)
-  if self._sock  then self._sock:close()  end
-  self._sock = nil
-  return true
+function TcpSock:socket(clear)
+  local s, b = self._sock, self._buf
+  if clear then
+    self._sock:stop_recv()
+    self._sock, self._buf = nil
+    self:close()
+  end
+  return s, b
 end
 
 end
