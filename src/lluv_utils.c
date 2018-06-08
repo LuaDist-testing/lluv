@@ -1,7 +1,7 @@
 /******************************************************************************
 * Author: Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
-* Copyright (C) 2014-2016 Alexey Melnichuk <alexeymelnichuck@gmail.com>
+* Copyright (C) 2014-2017 Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
 * Licensed according to the included 'LICENSE' document
 *
@@ -103,7 +103,7 @@ LLUV_INTERNAL void lluv_push_status(lua_State *L, int status){
 }
 
 LLUV_INTERNAL void lluv_alloc_buffer_cb(uv_handle_t* h, size_t suggested_size, uv_buf_t *buf){
-//  *buf = uv_buf_init(malloc(suggested_size), suggested_size);
+//  *buf = lluv_buf_init(malloc(suggested_size), suggested_size);
   lluv_handle_t *handle = lluv_handle_byptr(h);
   lluv_loop_t     *loop = lluv_loop_by_handle(h);
 
@@ -112,7 +112,7 @@ LLUV_INTERNAL void lluv_alloc_buffer_cb(uv_handle_t* h, size_t suggested_size, u
     buf->base = loop->buffer; buf->len = loop->buffer_size;
   }
   else{
-    *buf = uv_buf_init(lluv_alloc(handle->L, suggested_size), suggested_size);
+    *buf = lluv_buf_init(lluv_alloc(handle->L, suggested_size), suggested_size);
   }
 }
 
@@ -328,7 +328,9 @@ LLUV_INTERNAL unsigned int lluv_opt_flags_ui(lua_State *L, int idx, unsigned int
     }
     return flags;
   }
-  lua_pushstring(L, "Unsupported flag type");
+  lua_pushstring(L, "Unsupported flag type: ");
+  lua_pushstring(L, lua_typename(L, idx));
+  lua_concat(L, 2);
   return lua_error(L);
 }
 
@@ -346,7 +348,9 @@ LLUV_INTERNAL ssize_t lluv_opt_named_const(lua_State *L, int idx, unsigned int d
     lua_pushfstring(L, "Unknown constant: `%s`", key);
     return lua_error(L);
   }
-  lua_pushstring(L, "Unsupported constant type");
+  lua_pushstring(L, "Unsupported constant type: ");
+  lua_pushstring(L, lua_typename(L, idx));
+  lua_concat(L, 2);
   return lua_error(L);
 }
 
@@ -448,4 +452,74 @@ LLUV_INTERNAL int lluv_new_weak_table(lua_State*L, const char *mode){
   lua_setmetatable(L,-2);
   assert((top+1) == lua_gettop(L));
   return 1;
+}
+
+LLUV_INTERNAL uv_buf_t lluv_buf_init(char* base, size_t len) {
+  uv_buf_t buf;
+  buf.base = base;
+  buf.len = len;
+  return buf;
+}
+
+uv_os_sock_t lluv_check_os_sock(lua_State *L, int idx){
+  if(lua_islightuserdata(L, idx)){
+    return (uv_os_sock_t)lua_touserdata(L, idx);
+  }
+  return (uv_os_sock_t)lutil_checkint64(L, idx);
+}
+
+void lluv_push_os_fd(lua_State *L, uv_os_fd_t fd){
+#if !defined(_WIN32)
+  lutil_pushint64(L, (uint64_t)fd);
+#else
+  LLUV_ASSERT_SAME_SIZE(uv_os_fd_t, uv_os_sock_t);
+  lluv_push_os_socket(L, (uv_os_sock_t)fd);
+#endif
+}
+
+void lluv_push_os_socket(lua_State *L, uv_os_sock_t fd) {
+#if !defined(_WIN32)
+  lutil_pushint64(L, (uint64_t)fd);
+#else /*_WIN32*/
+  /* Assumes that compiler can optimize constant conditions. MSVC do this. */
+
+  /*On Lua 5.3 lua_Integer type can be represented exactly*/
+#if LUA_VERSION_NUM >= 503
+  if (sizeof(uv_os_sock_t) <= sizeof(lua_Integer)) {
+    lua_pushinteger(L, (lua_Integer)fd);
+    return;
+  }
+#endif
+
+#if defined(LUA_NUMBER_DOUBLE) || defined(LUA_NUMBER_FLOAT)
+  /*! @todo test DBL_MANT_DIG, FLT_MANT_DIG */
+
+  if (sizeof(lua_Number) == 8) { /*we have 53 bits for integer*/
+    if ((sizeof(uv_os_sock_t) <= 6)) {
+      lua_pushnumber(L, (lua_Number)fd);
+      return;
+    }
+
+    if(((UINT_PTR)fd & 0x1FFFFFFFFFFFFF) == (UINT_PTR)fd)
+      lua_pushnumber(L, (lua_Number)fd);
+    else
+      lua_pushlightuserdata(L, (void*)fd);
+
+    return;
+  }
+
+  if (sizeof(lua_Number) == 4) { /*we have 24 bits for integer*/
+    if (((UINT_PTR)fd & 0xFFFFFF) == (UINT_PTR)fd)
+      lua_pushnumber(L, (lua_Number)fd);
+    else
+      lua_pushlightuserdata(L, (void*)fd);
+    return;
+  }
+#endif
+
+  lutil_pushint64(L, (uint64_t)fd);
+  if (lluv_check_os_sock(L, -1) != fd)
+    lua_pushlightuserdata(L, (void*)fd);
+
+#endif /*_WIN32*/
 }

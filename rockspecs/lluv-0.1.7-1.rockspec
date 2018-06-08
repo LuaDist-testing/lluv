@@ -1,9 +1,9 @@
 package = "lluv"
-version = "scm-0"
+version = "0.1.7-1"
 
 source = {
-  url = "https://github.com/moteus/lua-lluv/archive/master.zip",
-  dir = "lua-lluv-master",
+  url = "https://github.com/moteus/lua-lluv/archive/v0.1.7.zip",
+  dir = "lua-lluv-0.1.7",
 }
 
 description = {
@@ -75,7 +75,6 @@ build = {
       incdirs   = { "$(UV_INCDIR)" },
       libdirs   = { "$(UV_LIBDIR)" }
     },
-    ["lluv.cofs"     ] = "src/lua/lluv/cofs.lua",
     ["lluv.utils"    ] = "src/lua/lluv/utils.lua",
     ["lluv.luasocket"] = "src/lua/lluv/luasocket.lua",
   }
