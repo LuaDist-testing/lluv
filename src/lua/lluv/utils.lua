@@ -58,6 +58,7 @@ end
 local function class(base)
   local t = base and setmetatable({}, base) or {}
   t.__index = t
+  t.__class = t
   t.__base  = base
 
   function t.new(...)
@@ -318,6 +319,13 @@ end
 function Buffer:append(data)
   if #data > 0 then
     self._lst:push_back(data)
+  end
+  return self
+end
+
+function Buffer:prepend(data)
+  if #data > 0 then
+    self._lst:push_front(data)
   end
   return self
 end
