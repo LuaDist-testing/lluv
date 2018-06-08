@@ -1,17 +1,17 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "lluv"
-version = "0.1.2-1"
+version = "0.1.3-1"
 
 -- LuaDist source
 source = {
-  tag = "0.1.2-1",
+  tag = "0.1.3-1",
   url = "git://github.com/LuaDist-testing/lluv.git"
 }
 -- Original source
 -- source = {
---   url = "https://github.com/moteus/lua-lluv/archive/v0.1.2.zip",
---   dir = "lua-lluv-0.1.2",
+--   url = "https://github.com/moteus/lua-lluv/archive/v0.1.3.zip",
+--   dir = "lua-lluv-0.1.3",
 -- }
 
 description = {
@@ -83,9 +83,7 @@ build = {
       incdirs   = { "$(UV_INCDIR)" },
       libdirs   = { "$(UV_LIBDIR)" }
     },
-    ["lluv.ftp"      ] = "src/lua/lluv/ftp.lua",
     ["lluv.utils"    ] = "src/lua/lluv/utils.lua",
-    ["lluv.memcached"] = "src/lua/lluv/memcached.lua",
     ["lluv.luasocket"] = "src/lua/lluv/luasocket.lua",
   }
 }

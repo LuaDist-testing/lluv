@@ -18,6 +18,10 @@ luarocks install lluv --server=https://rocks.moonscript.org/dev
  * [lluv-ssl](https://github.com/moteus/lua-lluv-ssl) - SSL/TLS sockets for lluv library
  * [lluv-websocket](https://github.com/moteus/lua-lluv-websocket) - Websocket sockets for lluv library
  * [lluv-redis](https://github.com/moteus/lua-lluv-redis) - Redis client for lluv library
+ * [lluv-memcached](https://github.com/moteus/lua-lluv-memcacheds) - Memcached client for lluv library
+ * [lluv-poll-zmq](https://github.com/moteus/lua-lluv-poll-zmq) - [ZMQ](http://zeromq.org) poller for lluv library
+ * [lluv-rs232](https://github.com/moteus/lua-lluv-rs232) - Serial port communication library for lluv library
+ * [lluv-gsmmodem](https://github.com/moteus/lua-lluv-gsmmodem) - Control GSM modem connected to serial port using AT commands.
  * [lua-gntp](https://github.com/moteus/lua-gntp) - lluv connector to Growl notification system
 
 ### Example
