@@ -1,11 +1,11 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "lluv"
-version = "0.1.1-1"
+version = "0.1.1-2"
 
 -- LuaDist source
 source = {
-  tag = "0.1.1-1",
+  tag = "0.1.1-2",
   url = "git://github.com/LuaDist-testing/lluv.git"
 }
 -- Original source
@@ -52,7 +52,7 @@ build = {
   platforms = {
     windows = { modules = {
       lluv = {
-        libraries = {"libuv", "ws2_32"},
+        libraries = {"libuv", "ws2_32", "Iphlpapi", "Psapi", "Advapi32"},
       }
     }},
     linux   = { modules = {
