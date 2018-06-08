@@ -1,7 +1,7 @@
 /******************************************************************************
 * Author: Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
-* Copyright (C) 2014 Alexey Melnichuk <alexeymelnichuck@gmail.com>
+* Copyright (C) 2014-2016 Alexey Melnichuk <alexeymelnichuck@gmail.com>
 *
 * Licensed according to the included 'LICENSE' document
 *
@@ -32,9 +32,13 @@
 #include "lluv_misc.h"
 #include "lluv_dns.h"
 
+#define LLUV_COPYRIGHT     "Copyright (C) 2014-2016 Alexey Melnichuk"
+#define LLUV_MODULE_NAME   "lluv"
+#define LLUV_LICENSE       "MIT"
+
 #define LLUV_VERSION_MAJOR 0
 #define LLUV_VERSION_MINOR 1
-#define LLUV_VERSION_PATCH 4
+#define LLUV_VERSION_PATCH 5
 // #define LLUV_VERSION_COMMENT "dev"
 
 static const char* LLUV_REGISTRY = LLUV_PREFIX" Registry";
@@ -111,6 +115,15 @@ static int luaopen_lluv_impl(lua_State *L, int safe){
 
   lluv_push_version(L);
   lua_setfield(L, -2, "_VERSION");
+
+  lua_pushliteral(L, LLUV_MODULE_NAME);
+  lua_setfield(L, -2, "_NAME");
+
+  lua_pushliteral(L, LLUV_COPYRIGHT);
+  lua_setfield(L, -2, "_COPYRIGHT");
+
+  lua_pushliteral(L, LLUV_LICENSE);
+  lua_setfield(L, -2, "_LICENSE");
 
   return 1;
 
